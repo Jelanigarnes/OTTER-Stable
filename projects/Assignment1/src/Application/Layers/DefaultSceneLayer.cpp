@@ -137,6 +137,14 @@ void DefaultSceneLayer::_CreateScene()
 		});
 		celShader->SetDebugName("Cel Shader");
 
+		// This shader handles our cel shading example
+		ShaderProgram::Sptr waveShader = ResourceManager::CreateAsset<ShaderProgram>(std::unordered_map<ShaderPartType, std::string>{
+			{ ShaderPartType::Vertex, "shaders/vertex_shaders/water.glsl" },
+			{ ShaderPartType::Fragment, "shaders/fragment_shaders/frag_water.glsl" }
+		});
+		waveShader->SetDebugName("Wave Shader");
+
+
 		
 
 
@@ -224,6 +232,17 @@ void DefaultSceneLayer::_CreateScene()
 			grassMaterial->Set("u_Material.Shininess", 0.1f);
 			grassMaterial->Set("u_Material.NormalMap", normalMapDefault);
 		}
+
+		//attempt at custom shader
+		Material::Sptr CustomMaterial = ResourceManager::CreateAsset<Material>(waveShader);
+		{
+			CustomMaterial->Name = "CustomHeartMaterial";
+			CustomMaterial->Set("u_Material.Diffuse", grassTex);
+			CustomMaterial->Set("u_Material.Shininess", 0.5f);
+			CustomMaterial->Set("u_Material.Threshold", 0.5f);;
+		}
+		//scene->CustomMaterial = CustomMaterial;
+
 		// This will be the reflective material, we'll make the whole thing 90% reflective
 		Material::Sptr monkeyMaterial = ResourceManager::CreateAsset<Material>(deferredForward);
 		{
@@ -352,7 +371,7 @@ void DefaultSceneLayer::_CreateScene()
 			Light::Sptr lightComponent = light->Add<Light>();
 			lightComponent->SetColor(glm::linearRand(glm::vec3(0.0f), glm::vec3(1.0f)));
 			lightComponent->SetRadius(glm::linearRand(0.1f, 10.0f));
-			lightComponent->SetIntensity(50.0f);
+			lightComponent->SetIntensity(1.0f);
 			scene->Lights.push_back(light);
 		}
 

@@ -201,7 +201,7 @@ namespace Gameplay {
 				}
 				else {
 					for (auto light : Lights) {
-						light->Get<Light>()->SetIntensity(25.0f);
+						light->Get<Light>()->SetIntensity(1.0f);
 						SetAmbientLight(glm::vec3(0.1f));
 					}
 					noLights = true;
