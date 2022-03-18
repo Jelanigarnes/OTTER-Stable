@@ -195,12 +195,14 @@ namespace Gameplay {
 				if (noLights) {
 					for (auto light : Lights) {
 						light->Get<Light>()->SetIntensity(0.0f);
+						SetAmbientLight(glm::vec3(0.0f, 0.0f, 0.0f));
 					}
 					noLights = false;
 				}
 				else {
 					for (auto light : Lights) {
-						light->Get<Light>()->SetIntensity(50.0f);
+						light->Get<Light>()->SetIntensity(25.0f);
+						SetAmbientLight(glm::vec3(0.1f));
 					}
 					noLights = true;
 				}
@@ -257,16 +259,16 @@ namespace Gameplay {
 			}
 			//Color Grading Warm
 			if (InputEngine::GetKeyState(GLFW_KEY_8) == ButtonState::Pressed) {
-
+				SetColorLUT(warm);
 			}
 			//Color Grading Cool
 			if (InputEngine::GetKeyState(GLFW_KEY_9) == ButtonState::Pressed) {
-
+				SetColorLUT(cool);
 			}
 			//Color Grading Custom
 			if (InputEngine::GetKeyState(GLFW_KEY_0) == ButtonState::Pressed) {
 				
-
+				SetColorLUT(custom);
 
 			}
 

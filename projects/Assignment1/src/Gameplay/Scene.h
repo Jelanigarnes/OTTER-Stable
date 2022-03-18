@@ -53,6 +53,11 @@ namespace Gameplay {
 		Material::Sptr Character1Material;
 		Material::Sptr Character1NoSpecular;
 
+		//LUTs
+		Texture3D::Sptr cool;
+		Texture3D::Sptr warm;
+		Texture3D::Sptr custom;
+
 		void SetPhysicsDebugDrawMode(BulletDebugMode mode);
 		BulletDebugMode GetPhysicsDebugDrawMode() const;
 

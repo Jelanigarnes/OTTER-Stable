@@ -149,6 +149,7 @@ void DefaultSceneLayer::_CreateScene()
 		Texture2D::Sptr    boxSpec      = ResourceManager::CreateAsset<Texture2D>("textures/box-specular.png");
 		Texture2D::Sptr    monkeyTex    = ResourceManager::CreateAsset<Texture2D>("textures/monkey-uvMap.png");
 		Texture2D::Sptr    leafTex      = ResourceManager::CreateAsset<Texture2D>("textures/leaves.png");
+		Texture2D::Sptr    grassTex = ResourceManager::CreateAsset<Texture2D>("textures/terrain/grass.png");
 		leafTex->SetMinFilter(MinFilter::Nearest);
 		leafTex->SetMagFilter(MagFilter::Nearest);
 
@@ -196,10 +197,16 @@ void DefaultSceneLayer::_CreateScene()
 		scene->SetSkyboxRotation(glm::rotate(MAT4_IDENTITY, glm::half_pi<float>(), glm::vec3(1.0f, 0.0f, 0.0f)));
 
 		// Loading in a color lookup table
-		Texture3D::Sptr lut = ResourceManager::CreateAsset<Texture3D>("luts/cool.CUBE");   
-
+		Texture3D::Sptr cool = ResourceManager::CreateAsset<Texture3D>("luts/cool.CUBE");   
+		Texture3D::Sptr warm = ResourceManager::CreateAsset<Texture3D>("luts/Warm.CUBE");
+		Texture3D::Sptr custom = ResourceManager::CreateAsset<Texture3D>("luts/Custom.CUBE");
 		// Configure the color correction LUT
-		scene->SetColorLUT(lut);
+		scene->SetColorLUT(cool);
+		scene->cool = cool;
+		scene->warm = warm;
+		scene->custom = custom;
+		/*scene->SetColorLUT(warm);
+		scene->SetColorLUT(custom);*/
 
 		// Create our materials
 		// This will be our box material, with no environment reflections
@@ -210,7 +217,13 @@ void DefaultSceneLayer::_CreateScene()
 			boxMaterial->Set("u_Material.Shininess", 0.1f);
 			boxMaterial->Set("u_Material.NormalMap", normalMapDefault);
 		}
-
+		Material::Sptr grassMaterial = ResourceManager::CreateAsset<Material>(deferredForward);
+		{
+			grassMaterial->Name = "grassMaterial";
+			grassMaterial->Set("u_Material.AlbedoMap", grassTex);
+			grassMaterial->Set("u_Material.Shininess", 0.1f);
+			grassMaterial->Set("u_Material.NormalMap", normalMapDefault);
+		}
 		// This will be the reflective material, we'll make the whole thing 90% reflective
 		Material::Sptr monkeyMaterial = ResourceManager::CreateAsset<Material>(deferredForward);
 		{
@@ -260,6 +273,20 @@ void DefaultSceneLayer::_CreateScene()
 			foliageMaterial->Set("u_WindStrength", 0.5f);
 			foliageMaterial->Set("u_VerticalScale", 1.0f);
 			foliageMaterial->Set("u_WindSpeed", 1.0f);
+		}
+
+		Material::Sptr swayMaterial = ResourceManager::CreateAsset<Material>(foliageShader);
+		{
+			swayMaterial->Name = "Foliage Shader";
+			swayMaterial->Set("u_Material.AlbedoMap", Character1Tex);
+			swayMaterial->Set("u_Material.Shininess", 0.1f);
+			swayMaterial->Set("u_Material.DiscardThreshold", 0.1f);
+			swayMaterial->Set("u_Material.NormalMap", normalMapDefault);
+
+			swayMaterial->Set("u_WindDirection", glm::vec3(1.0f, 1.0f, 0.0f));
+			swayMaterial->Set("u_WindStrength", 0.5f);
+			swayMaterial->Set("u_VerticalScale", 1.0f);
+			swayMaterial->Set("u_WindSpeed", 1.0f);
 		}
 
 		// Our toon shader material
@@ -316,8 +343,8 @@ void DefaultSceneLayer::_CreateScene()
 
 		// Create some lights for our scene
 		GameObject::Sptr lightParent = scene->CreateGameObject("Lights");
-
-		for (int ix = 0; ix < 20; ix++) {
+		GameObject::Sptr CharacterParent = scene->CreateGameObject("Characters");
+		for (int ix = 0; ix < 100; ix++) {
 			GameObject::Sptr light = scene->CreateGameObject("Light");
 			light->SetPostion(glm::vec3(glm::diskRand(25.0f), 1.0f));
 			lightParent->AddChild(light);
@@ -364,7 +391,7 @@ void DefaultSceneLayer::_CreateScene()
 			// Create and attach a RenderComponent to the object to draw our mesh
 			RenderComponent::Sptr renderer = plane->Add<RenderComponent>();
 			renderer->SetMesh(tiledMesh);
-			renderer->SetMaterial(boxMaterial);
+			renderer->SetMaterial(grassMaterial);
 
 			// Attach a plane collider that extends infinitely along the X/Y axis
 			RigidBody::Sptr physics = plane->Add<RigidBody>(/*static by default*/);
@@ -374,37 +401,157 @@ void DefaultSceneLayer::_CreateScene()
 		GameObject::Sptr Character1 = scene->CreateGameObject("Character1"); 
 		{
 			// Set position in the scene
-			Character1->SetPostion(glm::vec3(1.5f, 0.0f, 1.0f));
-			// Create and attach a renderer for the monkey
+			Character1->SetPostion(glm::vec3(1.0f, 0.0f, 1.0f));
+			
 			RenderComponent::Sptr renderer = Character1->Add<RenderComponent>();
 			renderer->SetMesh(Character1Mesh);
 			renderer->SetMaterial(Character1NoSpecular);
+			CharacterParent->AddChild(Character1);
 		}
 
-
-
-
-
-		GameObject::Sptr monkey1 = scene->CreateGameObject("Monkey 1");
+		GameObject::Sptr Character2 = scene->CreateGameObject("Character2");
 		{
 			// Set position in the scene
-			monkey1->SetPostion(glm::vec3(1.5f, 0.0f, 1.0f));
-
-			// Add some behaviour that relies on the physics body
-			monkey1->Add<JumpBehaviour>();
-
-			// Create and attach a renderer for the monkey
-			RenderComponent::Sptr renderer = monkey1->Add<RenderComponent>();
-			renderer->SetMesh(monkeyMesh);
-			renderer->SetMaterial(monkeyMaterial);
-
-			// Example of a trigger that interacts with static and kinematic bodies as well as dynamic bodies
-			TriggerVolume::Sptr trigger = monkey1->Add<TriggerVolume>();
-			trigger->SetFlags(TriggerTypeFlags::Statics | TriggerTypeFlags::Kinematics);
-			trigger->AddCollider(BoxCollider::Create(glm::vec3(1.0f)));
-
-			monkey1->Add<TriggerVolumeEnterBehaviour>();
+			Character2->SetPostion(glm::vec3(1.0f, 6.0f, 1.0f));
+		
+			RenderComponent::Sptr renderer = Character2->Add<RenderComponent>();
+			renderer->SetMesh(Character1Mesh);
+			renderer->SetMaterial(Character1NoSpecular);
+			CharacterParent->AddChild(Character2);
 		}
+
+		GameObject::Sptr Character3 = scene->CreateGameObject("Character3");
+		{
+			// Set position in the scene
+			Character3->SetPostion(glm::vec3(1.0f, 12.0f, 1.0f));
+
+			RenderComponent::Sptr renderer = Character3->Add<RenderComponent>();
+			renderer->SetMesh(Character1Mesh);
+			renderer->SetMaterial(Character1NoSpecular);
+			CharacterParent->AddChild(Character3);
+		}
+
+		GameObject::Sptr Character4 = scene->CreateGameObject("Character4");
+		{
+			// Set position in the scene
+			Character4->SetPostion(glm::vec3(7.0f, 0.0f, 1.0f));
+
+			RenderComponent::Sptr renderer = Character4->Add<RenderComponent>();
+			renderer->SetMesh(Character1Mesh);
+			renderer->SetMaterial(Character1NoSpecular);
+			CharacterParent->AddChild(Character4);
+		}
+
+		GameObject::Sptr Character5 = scene->CreateGameObject("Character5");
+		{
+			// Set position in the scene
+			Character5->SetPostion(glm::vec3(7.0f, 6.0f, 1.0f));
+
+			RenderComponent::Sptr renderer = Character5->Add<RenderComponent>();
+			renderer->SetMesh(Character1Mesh);
+			renderer->SetMaterial(Character1NoSpecular);
+			CharacterParent->AddChild(Character5);
+		}
+
+		GameObject::Sptr Character6 = scene->CreateGameObject("Character6");
+		{
+			// Set position in the scene
+			Character6->SetPostion(glm::vec3(7.0f, 12.0f, 1.0f));
+
+			RenderComponent::Sptr renderer = Character6->Add<RenderComponent>();
+			renderer->SetMesh(Character1Mesh);
+			renderer->SetMaterial(Character1NoSpecular);
+			CharacterParent->AddChild(Character6);
+		}
+
+		GameObject::Sptr Character7 = scene->CreateGameObject("Character7");
+		{
+			// Set position in the scene
+			Character7->SetPostion(glm::vec3(14.0f, 0.0f, 1.0f));
+
+			RenderComponent::Sptr renderer = Character7->Add<RenderComponent>();
+			renderer->SetMesh(Character1Mesh);
+			renderer->SetMaterial(Character1NoSpecular);
+			CharacterParent->AddChild(Character7);
+		}
+
+		GameObject::Sptr Character8 = scene->CreateGameObject("Character8");
+		{
+			// Set position in the scene
+			Character8->SetPostion(glm::vec3(14.0f, 6.0f, 1.0f));
+
+			RenderComponent::Sptr renderer = Character8->Add<RenderComponent>();
+			renderer->SetMesh(Character1Mesh);
+			renderer->SetMaterial(Character1NoSpecular);
+			CharacterParent->AddChild(Character8);
+		}
+
+		GameObject::Sptr Character9 = scene->CreateGameObject("Character9");
+		{
+			// Set position in the scene
+			Character9->SetPostion(glm::vec3(14.0f, 12.0f, 1.0f));
+
+			RenderComponent::Sptr renderer = Character9->Add<RenderComponent>();
+			renderer->SetMesh(Character1Mesh);
+			renderer->SetMaterial(Character1NoSpecular);
+			CharacterParent->AddChild(Character9);
+		}
+
+		GameObject::Sptr Character10 = scene->CreateGameObject("Character10");
+		{
+			// Set position in the scene
+			Character10->SetPostion(glm::vec3(1.0f, 18.0f, 1.0f));
+
+			RenderComponent::Sptr renderer = Character10->Add<RenderComponent>();
+			renderer->SetMesh(Character1Mesh);
+			renderer->SetMaterial(swayMaterial);
+			CharacterParent->AddChild(Character10);
+		}
+
+		GameObject::Sptr Character11 = scene->CreateGameObject("Character11");
+		{
+			// Set position in the scene
+			Character11->SetPostion(glm::vec3(7.0f, 18.0f, 1.0f));
+
+			RenderComponent::Sptr renderer = Character11->Add<RenderComponent>();
+			renderer->SetMesh(Character1Mesh);
+			renderer->SetMaterial(swayMaterial);
+			CharacterParent->AddChild(Character11);
+		}
+
+		GameObject::Sptr Character12 = scene->CreateGameObject("Character12");
+		{
+			// Set position in the scene
+			Character12->SetPostion(glm::vec3(14.0f, 18.0f, 1.0f));
+
+			RenderComponent::Sptr renderer = Character12->Add<RenderComponent>();
+			renderer->SetMesh(Character1Mesh);
+			renderer->SetMaterial(swayMaterial);
+			CharacterParent->AddChild(Character12);
+		}
+
+
+
+		//GameObject::Sptr monkey1 = scene->CreateGameObject("Monkey 1");
+		//{
+		//	// Set position in the scene
+		//	monkey1->SetPostion(glm::vec3(1.5f, 0.0f, 1.0f));
+
+		//	// Add some behaviour that relies on the physics body
+		//	monkey1->Add<JumpBehaviour>();
+
+		//	// Create and attach a renderer for the monkey
+		//	RenderComponent::Sptr renderer = monkey1->Add<RenderComponent>();
+		//	renderer->SetMesh(monkeyMesh);
+		//	renderer->SetMaterial(monkeyMaterial);
+
+		//	// Example of a trigger that interacts with static and kinematic bodies as well as dynamic bodies
+		//	TriggerVolume::Sptr trigger = monkey1->Add<TriggerVolume>();
+		//	trigger->SetFlags(TriggerTypeFlags::Statics | TriggerTypeFlags::Kinematics);
+		//	trigger->AddCollider(BoxCollider::Create(glm::vec3(1.0f)));
+
+		//	monkey1->Add<TriggerVolumeEnterBehaviour>();
+		//}
 
 		//GameObject::Sptr demoBase = scene->CreateGameObject("Demo Parent");
 
@@ -440,7 +587,7 @@ void DefaultSceneLayer::_CreateScene()
 		//	demoBase->AddChild(foliageBall);
 		//}
 
-		//// Box to showcase the foliage material
+		// Box to showcase the foliage material
 		//GameObject::Sptr foliageBox = scene->CreateGameObject("Foliage Box");
 		//{
 		//	MeshResource::Sptr box = ResourceManager::CreateAsset<MeshResource>();
@@ -455,7 +602,7 @@ void DefaultSceneLayer::_CreateScene()
 		//	renderer->SetMesh(box);
 		//	renderer->SetMaterial(foliageMaterial);
 
-		//	demoBase->AddChild(foliageBox);
+		//	//demoBase->AddChild(foliageBox);
 		//}
 
 		//// Box to showcase the specular material
